@@ -57,7 +57,7 @@ struct ResultCardView: View {
         }
     }
 
-    private func infoRow(_ label: String, _ value: String) -> GridRow {
+    private func infoRow(_ label: String, _ value: String) -> some View {
         GridRow {
             Text(label)
                 .font(.system(size: 12))
