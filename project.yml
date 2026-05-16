@@ -3,7 +3,7 @@ options:
   bundleIdPrefix: com.carplate
   deploymentTarget:
     iOS: "16.0"
-  xcodeVersion: "15.0"
+  xcodeVersion: "14.3"
 settings:
   base:
     SWIFT_VERSION: "5.9"
