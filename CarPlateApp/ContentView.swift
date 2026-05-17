@@ -77,6 +77,7 @@ struct ContentView: View {
                 .keyboardType(.numberPad)
                 .focused($plateFocused)
                 .font(.system(size: 18))
+                .foregroundColor(.black)
                 .padding(12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
