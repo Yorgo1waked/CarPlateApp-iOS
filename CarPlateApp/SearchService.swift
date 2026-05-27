@@ -4,7 +4,7 @@ import CryptoKit
 struct SearchService {
 
     private let url = URL(string: "https://www.carplatelebanon.com/")!
-    private let nextAction = "40c6096741dceb5df9e3b3b4898a95d597f5b59a4d"
+    private let nextAction = "4068f69971843e6b1672a2a8b2a032e3be302e18fa"
 
     func search(plateNumber: String, symbol: String?) async -> SearchResult {
         do {
