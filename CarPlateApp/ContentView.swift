@@ -37,6 +37,16 @@ final class SearchViewModel: ObservableObject {
 struct ContentView: View {
     @StateObject private var vm = SearchViewModel()
     @FocusState private var plateFocused: Bool
+    @AppStorage("appTheme") private var themeRaw = "system"
+
+    private var theme: AppTheme { AppTheme(rawValue: themeRaw) ?? .system }
+    private var themeScheme: ColorScheme? {
+        switch theme {
+        case .system: return nil
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
 
     var body: some View {
         ScrollView {
@@ -56,19 +66,49 @@ struct ContentView: View {
             .padding(.horizontal, 16)
         }
         .background(Color.appBackground)
+        .preferredColorScheme(themeScheme)
         .onTapGesture { plateFocused = false }
     }
 
     private var titleSection: some View {
         VStack(spacing: 4) {
+            HStack {
+                themeMenu
+                Spacer()
+            }
             Text("CarPlate Lebanon")
                 .font(.system(size: 28, weight: .bold))
                 .foregroundColor(.appOnSurface)
-                .padding(.top, 24)
+                .padding(.top, 12)
             Text("تفييش السيارات لبنان")
                 .font(.subheadline)
                 .foregroundColor(.appTextMuted)
         }
+    }
+
+    private var themeMenu: some View {
+        Menu {
+            ForEach(AppTheme.allCases) { option in
+                Button {
+                    themeRaw = option.rawValue
+                } label: {
+                    if option == theme {
+                        Label(option.label, systemImage: "checkmark")
+                    } else {
+                        Text(option.label)
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "circle.lefthalf.filled")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundColor(.appOnSurface)
+                .padding(9)
+                .background(Color.appCardBg)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(Color.appBorderColor, lineWidth: 1))
+        }
+        .accessibilityLabel("Appearance")
     }
 
     private var searchCard: some View {
@@ -77,7 +117,7 @@ struct ContentView: View {
                 .keyboardType(.numberPad)
                 .focused($plateFocused)
                 .font(.system(size: 18))
-                .foregroundColor(.black)
+                .foregroundColor(.appOnSurface)
                 .padding(12)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
