@@ -4,7 +4,9 @@ import CryptoKit
 struct SearchService {
 
     private let url = URL(string: "https://www.carplatelebanon.com/")!
-    private let nextAction = "4068f69971843e6b1672a2a8b2a032e3be302e18fa"
+    private let fallbackActionID = "4031f0ea98b5dabef6b82fff62e8f454e00a5aa7b5"
+    private let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
+    private var cachedActionID: String?
 
     func search(plateNumber: String, symbol: String?) async -> SearchResult {
         do {
@@ -35,28 +37,75 @@ struct SearchService {
     }
 
     private func performRequest(body: Data) async throws -> Data {
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue(nextAction, forHTTPHeaderField: "Next-Action")
-        req.setValue("text/plain;charset=UTF-8", forHTTPHeaderField: "Content-Type")
-        req.setValue("*/*", forHTTPHeaderField: "Accept")
-        req.setValue("https://www.carplatelebanon.com", forHTTPHeaderField: "Origin")
-        req.setValue("https://www.carplatelebanon.com/", forHTTPHeaderField: "Referer")
-        req.setValue(
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
-            forHTTPHeaderField: "User-Agent"
-        )
-        req.httpBody = body
-        req.timeoutInterval = 15
+        for attempt in 0...1 {
+            let action: String
+            if attempt == 0 {
+                action = cachedActionID ?? fallbackActionID
+            } else if let fresh = await fetchActionID() {
+                cachedActionID = fresh
+                action = fresh
+            } else {
+                action = fallbackActionID
+            }
 
-        let (data, resp) = try await URLSession.shared.data(for: req)
-        guard let http = resp as? HTTPURLResponse else {
-            throw SearchError.invalidResponse
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue(action, forHTTPHeaderField: "Next-Action")
+            req.setValue("text/plain;charset=UTF-8", forHTTPHeaderField: "Content-Type")
+            req.setValue("*/*", forHTTPHeaderField: "Accept")
+            req.setValue("https://www.carplatelebanon.com", forHTTPHeaderField: "Origin")
+            req.setValue("https://www.carplatelebanon.com/", forHTTPHeaderField: "Referer")
+            req.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+            req.httpBody = body
+            req.timeoutInterval = 15
+
+            do {
+                let (data, resp) = try await URLSession.shared.data(for: req)
+                guard let http = resp as? HTTPURLResponse else {
+                    throw SearchError.invalidResponse
+                }
+                guard http.statusCode == 200 else {
+                    throw SearchError.serverError(http.statusCode)
+                }
+                return data
+            } catch {
+                if attempt == 0 { continue }
+                throw error
+            }
         }
-        guard http.statusCode == 200 else {
-            throw SearchError.serverError(http.statusCode)
+        throw SearchError.invalidResponse
+    }
+
+    private func fetchActionID() async -> String? {
+        var homeReq = URLRequest(url: url)
+        homeReq.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        homeReq.timeoutInterval = 15
+        guard let (htmlData, _) = try? await URLSession.shared.data(for: homeReq),
+              let html = String(data: htmlData, encoding: .utf8),
+              let scriptURL = pageScriptURL(from: html) else { return nil }
+
+        var jsReq = URLRequest(url: scriptURL)
+        jsReq.setValue(userAgent, forHTTPHeaderField: "User-Agent")
+        jsReq.timeoutInterval = 15
+        guard let (jsData, _) = try? await URLSession.shared.data(for: jsReq),
+              let js = String(data: jsData, encoding: .utf8) else { return nil }
+
+        let pattern = try? NSRegularExpression(pattern: "createServerReference\\(\"([0-9a-fA-F]{32,})\"")
+        guard let m = pattern?.firstMatch(in: js, range: NSRange(js.startIndex..., in: js)),
+              let range = Range(m.range(at: 1), in: js) else { return nil }
+        return String(js[range])
+    }
+
+    private func pageScriptURL(from html: String) -> URL? {
+        let pattern = try? NSRegularExpression(pattern: "/_next/static/chunks/app/page-[^\"]+\\.js")
+        guard let m = pattern?.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+              let range = Range(m.range(at: 0), in: html) else { return nil }
+        var path = String(html[range])
+        if !path.hasPrefix("http") {
+            let base = url.absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            path = base + path
         }
-        return data
+        return URL(string: path)
     }
 
     private func sha256Hex(_ s: String) -> String {
