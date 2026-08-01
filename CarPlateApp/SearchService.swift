@@ -1,7 +1,7 @@
 import Foundation
 import CryptoKit
 
-struct SearchService {
+final class SearchService {
 
     private let url = URL(string: "https://www.carplatelebanon.com/")!
     private let fallbackActionID = "4031f0ea98b5dabef6b82fff62e8f454e00a5aa7b5"
