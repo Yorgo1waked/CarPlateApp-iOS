@@ -90,7 +90,7 @@ final class SearchService {
         guard let (jsData, _) = try? await URLSession.shared.data(for: jsReq),
               let js = String(data: jsData, encoding: .utf8) else { return nil }
 
-        let pattern = try? NSRegularExpression(pattern: "createServerReference\\(\"([0-9a-fA-F]{32,})\"")
+        let pattern = try? NSRegularExpression(pattern: "createServerReference\\)?\\(\"([0-9a-fA-F]{32,})\"")
         guard let m = pattern?.firstMatch(in: js, range: NSRange(js.startIndex..., in: js)),
               let range = Range(m.range(at: 1), in: js) else { return nil }
         return String(js[range])
