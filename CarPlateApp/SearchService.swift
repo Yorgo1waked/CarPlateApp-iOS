@@ -4,7 +4,7 @@ import CryptoKit
 final class SearchService {
 
     private let url = URL(string: "https://www.carplatelebanon.com/")!
-    private let fallbackActionID = "4031f0ea98b5dabef6b82fff62e8f454e00a5aa7b5"
+    private let fallbackActionID = "40ec77d2ce9c95b84f224de62f619a88219aa3dadf"
     private let userAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
     private var cachedActionID: String?
 
